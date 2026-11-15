@@ -1,13 +1,14 @@
 (async()=>{
 if(window.__meshBulk){alert('Парсер уже работает');return}
-if(!document.querySelector('a[data-itemcard][href*="/item/"]')){alert('Открой страницу Мешка со списком лотов');return}
+const root=document.querySelector('#lots-list');
+if(!root){alert('Не найден основной список лотов (#lots-list). Открой страницу продавца со списком его лотов.');return}
 window.__meshBulk=true;
 const sleep=t=>new Promise(r=>setTimeout(r,t)),links=new Map(),rows=[],errors=[];
 const panel=document.createElement('div');
 Object.assign(panel.style,{position:'fixed',top:'8px',left:'8px',right:'8px',zIndex:999999,background:'#202124',color:'white',padding:'14px',fontSize:'14px',borderRadius:'8px',whiteSpace:'pre-wrap',maxHeight:'70vh',overflowY:'auto'});
 document.body.append(panel);
 const say=s=>panel.textContent=s;
-function scan(){document.querySelectorAll('a[data-itemcard][href*="/item/"]').forEach(a=>{if(a.dataset.itemcard)links.set(a.dataset.itemcard,a.href)})}
+function scan(){root.querySelectorAll('a[data-itemcard][href*="/item/"]').forEach(a=>{if(a.dataset.itemcard)links.set(a.dataset.itemcard,a.href)})}
 function extract(t,key){
  const p=t.indexOf('"'+key+'"');if(p<0)throw Error('Ключ '+key+' не найден');
  const c=t.indexOf(':',p+key.length+1);if(c<0)throw Error('Нет двоеточия после '+key);
