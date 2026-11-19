@@ -71,7 +71,7 @@
     type: sellerTypeMatch ? sellerTypeMatch[0] : '',
     active_ads_count: adsCountMatch ? Number(adsCountMatch[1]) : null,
     profile_urls: profileUrls,
-    response_time: responseMatch ? clean(responseMatch[0]) : '',
+    response_time: responseMatch,
     visible_info: sellerText
   };
 
@@ -100,7 +100,11 @@
     ...(description.match(/[^.!?\n]*(?:авито доставка|доставка|самовывоз)[^.!?\n]*[.!]?/gi) || [])
   ]);
   const pickupOnly = /только самовывоз/i.test(description);
-  const locationText = allText(['[data-marker*="item-location"]', '[data-marker*="address"]'])[0] || '';
+  const ogTitle = meta('og:title');
+  const metaLocationMatch = ogTitle.match(/\\bв\\s+(.+?)\\s+по\\s+низкой цене/i);
+  const urlCitySlug = location.pathname.split('/').filter(Boolean)[0] || '';
+  const locationText = allText(['[data-marker*="item-location"]', '[data-marker*="address"]'])[0] ||
+    (metaLocationMatch ? clean(metaLocationMatch[1]) : (urlCitySlug === 'moskva' ? 'Москва' : urlCitySlug));
 
   const data = {
     source: 'avito',
@@ -122,7 +126,7 @@
     delivery_and_pickup: { pickup_only: pickupOnly, visible_text: deliveryText },
     images,
     meta: {
-      og_title: meta('og:title'),
+      og_title: ogTitle,
       og_description: meta('og:description'),
       og_image: meta('og:image'),
       price_currency: meta('product:price:currency')
@@ -165,7 +169,10 @@
     'Тип: ' + (seller.type || '—') + ' | на Авито: ' + (seller.account_since || '—'),
     'Объявлений продавца: ' + (seller.active_ads_count ?? '—'),
     'Ссылок профиля: ' + profileUrls.length,
+    'Дата публикации: ' + (data.listing_stats.published_label || '—'),
     'Просмотров: ' + (data.listing_stats.views_count ?? '—'),
+    'Время ответа: ' + (seller.response_time || '—'),
+    'Местоположение: ' + (locationText || '—'),
     'Только самовывоз: ' + (pickupOnly ? 'да' : 'не подтверждено'),
     'Фотографий галереи: ' + images.length + ' (img: ' + galleryImages.length + ')',
     '',
