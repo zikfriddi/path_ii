@@ -24,7 +24,7 @@
   const parameters = unique(paramNodes.map(el => el.innerText))
     .filter(t => t.includes(':') && t.length < 300 && !/разместить похожее/i.test(t));
   if (!parameters.length && paramsText) {
-    parameters.push(...(paramsText.match(/[^\\n]+/g) || []).map(clean)
+    parameters.push(...(paramsText.match(/[^\n]+/g) || []).map(clean)
       .filter(t => t.includes(':') && !/разместить похожее|^характеристики$/i.test(t)));
   }
 
@@ -36,14 +36,14 @@
     document.querySelector('[data-marker*="seller-info"]');
   const sellerText = clean(sellerNode?.innerText);
   const sellerName = clean(marker('seller-info/name')?.innerText);
-  const ratingMatch = sellerText.match(/([0-5][,.]\\d)\\s*(?=\\d+\\s+отзыв|отзыв)/i);
-  const reviewsMatch = sellerText.match(/(\\d+)\\s+отзыв/i);
-  const accountAgeMatch = sellerText.match(/На Авито\\s*(?:c|с)\\s*([^\\n]+)/i);
-  const adsCountMatch = sellerText.match(/(\\d+)\\s+объявлен/i);
+  const ratingMatch = sellerText.match(/([0-5][,.]\d)\s*(?=\d+\s+отзыв|отзыв)/i);
+  const reviewsMatch = sellerText.match(/(\d+)\s+отзыв/i);
+  const accountAgeMatch = sellerText.match(/На Авито\s*(?:c|с)\s*([^\n]+)/i);
+  const adsCountMatch = sellerText.match(/(\d+)\s+объявлен/i);
   const sellerTypeMatch = sellerText.match(/Частное лицо|Компания/i);
   const profileUrls = unique(
     [...(sellerNode || document).querySelectorAll('a[href]')]
-      .filter(a => /\\/user\\//i.test(a.href))
+      .filter(a => /\/user\//i.test(a.href))
       .map(a => {
         const u = new URL(a.href, location.href);
         return u.origin + u.pathname;
@@ -66,23 +66,23 @@
   for (const img of galleryImages) {
     imageCandidates.push(img.currentSrc, img.src, img.getAttribute('src'), img.getAttribute('data-src'));
     const srcset = img.getAttribute('srcset') || img.getAttribute('data-srcset') || '';
-    srcset.split(',').forEach(part => imageCandidates.push(part.trim().split(/\\s+/)[0]));
+    srcset.split(',').forEach(part => imageCandidates.push(part.trim().split(/\s+/)[0]));
   }
   if (gallery) {
     [...gallery.querySelectorAll('source[srcset]')].forEach(source =>
       (source.getAttribute('srcset') || '').split(',').forEach(part =>
-        imageCandidates.push(part.trim().split(/\\s+/)[0])
+        imageCandidates.push(part.trim().split(/\s+/)[0])
       )
     );
   }
   const images = unique(imageCandidates)
-    .filter(src => /^https?:\\/\\//i.test(src))
-    .filter(src => /\\.avito\\.(?:st|ru)\\//i.test(src))
-    .filter(src => !/\\.svg(?:[?#]|$)|\\/img\\/share\\/|adriver|event\\.cgi/i.test(src));
+    .filter(src => /^https?:\/\//i.test(src))
+    .filter(src => /\.avito\.(?:st|ru)\//i.test(src))
+    .filter(src => !/\.svg(?:[?#]|$)|\/img\/share\/|adriver|event\.cgi/i.test(src));
 
   const deliveryText = unique([
     ...allText(['[data-marker*="delivery"]', '[data-marker*="shipping"]']),
-    ...(description.match(/[^.!?\\n]*(?:авито доставка|доставка|самовывоз)[^.!?\\n]*[.!]?/gi) || [])
+    ...(description.match(/[^.!?\n]*(?:авито доставка|доставка|самовывоз)[^.!?\n]*[.!]?/gi) || [])
   ]);
   const pickupOnly = /только самовывоз/i.test(description);
   const locationText = allText(['[data-marker*="item-location"]', '[data-marker*="address"]'])[0] || '';
