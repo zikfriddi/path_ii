@@ -29,10 +29,10 @@
   }
 
   const attributes = {};
-  const attributePattern = /([^:]{2,45}):\\s*(.*?)(?=\\s+[^:]{2,45}:\\s|$)/g;
+  const attributePattern = /([^:]{2,45}):\s*(.*?)(?=\s+[^:]{2,45}:\s|$)/g;
   let attributeMatch;
   while ((attributeMatch = attributePattern.exec(paramsText)) !== null) {
-    const key = clean(attributeMatch[1]).replace(/^.*характеристики\\s*/i, '');
+    const key = clean(attributeMatch[1]).replace(/^.*характеристики\s*/i, '');
     const value = clean(attributeMatch[2]);
     if (key && value && !/разместить похожее/i.test(key)) attributes[key] = value;
   }
@@ -47,7 +47,7 @@
   const sellerName = clean(marker('seller-info/name')?.innerText);
   const ratingMatch = sellerText.match(/([0-5][,.]\d)\s*(?=\d+\s+отзыв|отзыв)/i);
   const reviewsMatch = sellerText.match(/(\d+)\s+отзыв/i);
-  const accountAgeMatch = sellerText.match(/На Авито\s*(?:c|с)\s*([^\n]+)/i);
+  const accountAgeMatch = sellerText.match(/На Авито\s*(?:c|с)\s*(\d{4})/i);
   const adsCountMatch = sellerText.match(/(\d+)\s+объявлен/i);
   const sellerTypeMatch = sellerText.match(/Частное лицо|Компания/i);
   const profileUrls = unique(
@@ -60,9 +60,9 @@
   );
   const bodyText = clean(document.body.innerText);
   const listingMetaMatch = id
-    ? bodyText.match(new RegExp('№\\\\s*' + id + '\\\\s*·\\\\s*([^·]+)·\\\\s*(\\\\d+)\\\\s+просмотр', 'i'))
+    ? bodyText.match(new RegExp('№\\s*' + id + '\\s*·\\s*([^·]+)·\\s*(\\d+)\\s+просмотр', 'i'))
     : null;
-  const responseMatch = bodyText.match(/Отвечает\\s+[^.]+/i);
+  const responseMatch = bodyText.match(/Отвечает\s+[^.]+/i);
   const seller = {
     name: sellerName,
     rating: ratingMatch ? ratingMatch[1].replace(',', '.') : '',
