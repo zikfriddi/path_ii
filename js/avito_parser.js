@@ -34,14 +34,14 @@
       return;
     }
 
-    const clean = value => (value || '').replace(/\\s+/g, ' ').trim();
-    const datePattern = /сегодня|вчера|\\d{1,2}\\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\\d{1,2}\\.\\d{1,2}\\.\\d{2,4}/i;
+    const clean = value => (value || '').replace(/\s+/g, ' ').trim();
+    const datePattern = /сегодня|вчера|\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\d{1,2}\.\d{1,2}\.\d{2,4}/i;
 
     const rows = cards.map(card => {
       const marker = card.getAttribute('data-marker') || '';
       const id = marker.replace(/^item-/, '');
       const link = [...card.querySelectorAll('a[href]')]
-        .find(a => a.href.includes(id) && /\\/\\d{6,}/.test(a.href));
+        .find(a => a.href.includes(id) && /\/\d{6,}/.test(a.href));
 
       const title = clean(card.querySelector('strong')?.innerText);
       const price = clean([...card.querySelectorAll('h4, [data-marker*="price"]')]
@@ -62,11 +62,11 @@
 
     const unique = [...new Map(rows.map(row => [row.id, row])).values()];
     const columns = ['id', 'title', 'price', 'address', 'date', 'url', 'image'];
-    const quote = value => '"' + String(value ?? '').replace(/"/g, '""').replace(/[\\r\\n]+/g, ' ') + '"';
-    const csv = '\\uFEFF' + [
+    const quote = value => '"' + String(value ?? '').replace(/"/g, '""').replace(/[\r\n]+/g, ' ') + '"';
+    const csv = '\uFEFF' + [
       columns.join(';'),
       ...unique.map(row => columns.map(key => quote(row[key])).join(';'))
-    ].join('\\r\\n');
+    ].join('\r\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const objectUrl = URL.createObjectURL(blob);
@@ -80,16 +80,16 @@
 
     const missing = cards.length - unique.length;
     say(
-      'Avito Parser — готово\\n' +
-      'DOM-карточек найдено: ' + cards.length + '\\n' +
-      'Записей в CSV: ' + unique.length + '\\n' +
-      'Пропущено/дубликатов: ' + missing + '\\n\\n' +
-      'CSV должен скачаться автоматически.\\n' +
+      'Avito Parser — готово\n' +
+      'DOM-карточек найдено: ' + cards.length + '\n' +
+      'Записей в CSV: ' + unique.length + '\n' +
+      'Пропущено/дубликатов: ' + missing + '\n\n' +
+      'CSV должен скачаться автоматически.\n' +
       'Нажми на это окно, чтобы закрыть.'
     );
     panel.onclick = () => panel.remove();
   } catch (error) {
-    say('Ошибка Avito Parser:\\n' + (error.stack || error.message) + '\\n\\nНажми, чтобы закрыть.');
+    say('Ошибка Avito Parser:\n' + (error.stack || error.message) + '\n\nНажми, чтобы закрыть.');
     panel.onclick = () => panel.remove();
   } finally {
     window.__avitoParserRunning = false;
