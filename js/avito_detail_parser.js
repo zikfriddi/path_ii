@@ -60,9 +60,13 @@
   );
   const bodyText = clean(document.body.innerText);
   const listingMetaMatch = id
-    ? bodyText.match(new RegExp('№\s*' + id + '\s*·\s*([^·]+)·\s*(\d+)\s+просмотр', 'i'))
+    ? bodyText.match(new RegExp('№\\s*' + id + '\\s*[·•]\\s*(.{1,80}?)\\s*[·•]\\s*(\\d+)\\s+просмотр(?:а|ов)?', 'i'))
     : null;
-  const responseMatch = bodyText.match(/Отвечает\s+[^.]+/i);
+  const responseCandidates = [...document.querySelectorAll('[data-marker], span, p, div')]
+    .map(el => clean(el.innerText || el.textContent))
+    .filter(t => /^Отвечает\s+/i.test(t) && t.length <= 100)
+    .sort((a, b) => a.length - b.length);
+  const responseMatch = responseCandidates[0] || '';
   const seller = {
     name: sellerName,
     rating: ratingMatch ? ratingMatch[1].replace(',', '.') : '',
@@ -101,7 +105,7 @@
   ]);
   const pickupOnly = /только самовывоз/i.test(description);
   const ogTitle = meta('og:title');
-  const metaLocationMatch = ogTitle.match(/\\bв\\s+(.+?)\\s+по\\s+низкой цене/i);
+  const metaLocationMatch = ogTitle.match(/\bв\s+(.+?)\s+по\s+низкой цене/i);
   const urlCitySlug = location.pathname.split('/').filter(Boolean)[0] || '';
   const locationText = allText(['[data-marker*="item-location"]', '[data-marker*="address"]'])[0] ||
     (metaLocationMatch ? clean(metaLocationMatch[1]) : (urlCitySlug === 'moskva' ? 'Москва' : urlCitySlug));
