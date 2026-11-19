@@ -161,7 +161,7 @@
   });
   document.body.append(panel);
   panel.textContent = [
-    'AVITO DETAIL PARSER — V2',
+    'AVITO DETAIL PARSER',
     'URL: ' + canonical,
     'ID: ' + (id || 'не найден'),
     'Заголовок: ' + (title || 'не найден'),
@@ -178,13 +178,9 @@
     'Время ответа: ' + (seller.response_time || '—'),
     'Местоположение: ' + (locationText || '—'),
     'Только самовывоз: ' + (pickupOnly ? 'да' : 'не подтверждено'),
-    'Фотографий галереи: ' + images.length + ' (img: ' + galleryImages.length + ')',
+    'Фотографий: ' + images.length,
     '',
-    'DOM-маркеры:',
-    ...(data.diagnostics.data_markers.length ? data.diagnostics.data_markers : ['не обнаружены']),
-    '',
-    'JSON должен скачаться автоматически.',
-    'Пришли его сюда для проверки V2.',
+    'JSON сохранён автоматически.',
     'Нажми на окно, чтобы закрыть.'
   ].join('\n');
 
