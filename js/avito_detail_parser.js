@@ -108,7 +108,7 @@
   const metaLocationMatch = ogTitle.match(/\bв\s+(.+?)\s+по\s+низкой цене/i);
   const urlCitySlug = location.pathname.split('/').filter(Boolean)[0] || '';
   const locationText = allText(['[data-marker*="item-location"]', '[data-marker*="address"]'])[0] ||
-    (metaLocationMatch ? clean(metaLocationMatch[1]) : (urlCitySlug === 'moskva' ? 'Москва' : urlCitySlug));
+    (urlCitySlug === 'moskva' ? 'Москва' : (metaLocationMatch ? clean(metaLocationMatch[1]) : urlCitySlug));
 
   const data = {
     source: 'avito',
