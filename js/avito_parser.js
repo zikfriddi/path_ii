@@ -17,56 +17,64 @@
     background: '#202124',
     color: '#fff',
     padding: '14px',
-    font: '14px/1.45 sans-serif',
+    font: '13px/1.45 monospace',
     borderRadius: '8px',
     whiteSpace: 'pre-wrap',
-    maxHeight: '75vh',
-    overflowY: 'auto'
+    maxHeight: '80vh',
+    overflowY: 'auto',
+    overflowWrap: 'anywhere'
   });
   document.body.append(panel);
 
-  const say = value => { panel.textContent = value; };
+  const clean = value => (value || '').replace(/\\s+/g, ' ').trim();
+  const datePattern = /сегодня|вчера|\\d{1,2}\\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\\d{1,2}\\.\\d{1,2}\\.\\d{2,4}/i;
 
   try {
     if (!cards.length) {
-      say('Карточки Avito не найдены.\nОткрой страницу поиска или Избранное с объявлениями.\n\nЗакрыть');
+      panel.textContent = 'Карточки Avito не найдены.\\nОткрой страницу поиска или Избранное с объявлениями.\\n\\nНажми, чтобы закрыть.';
       panel.onclick = () => panel.remove();
       return;
     }
 
-    const clean = value => (value || '').replace(/\s+/g, ' ').trim();
-    const datePattern = /сегодня|вчера|\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|\d{1,2}\.\d{1,2}\.\d{2,4}/i;
-
-    const rows = cards.map(card => {
+    const diagnostics = cards.map((card, index) => {
       const marker = card.getAttribute('data-marker') || '';
       const id = marker.replace(/^item-/, '');
-      const link = [...card.querySelectorAll('a[href]')]
-        .find(a => a.href.includes(id) && /\/\d{6,}/.test(a.href));
-
-      const title = clean(card.querySelector('strong')?.innerText);
+      const anchors = [...card.querySelectorAll('a[href]')];
+      const link = anchors.find(a => a.href.includes(id) && /\\/\\d{6,}/.test(a.href));
+      const titleEl = card.querySelector('strong');
+      const title = clean(titleEl?.innerText);
       const price = clean([...card.querySelectorAll('h4, [data-marker*="price"]')]
         .map(el => el.innerText)
-        .find(text => /₽/.test(text)));
-
+        .find(value => /₽/.test(value)));
       const address = clean(card.querySelector('[class*="addressLine"]')?.innerText);
       const date = clean([...card.querySelectorAll('p, span, time')]
         .map(el => el.innerText || el.getAttribute('datetime'))
-        .find(text => text && datePattern.test(text)));
-
+        .find(value => value && datePattern.test(value)));
       const imageEl = card.querySelector('img');
       const image = imageEl?.currentSrc || imageEl?.src || '';
-      const url = link ? new URL(link.href, location.href).origin + new URL(link.href, location.href).pathname : '';
+      const parsedUrl = link ? new URL(link.href, location.href) : null;
+      const url = parsedUrl ? parsedUrl.origin + parsedUrl.pathname : '';
+      const reasons = [];
+      if (!id || !/^\\d{6,}$/.test(id)) reasons.push('ID не распознан');
+      if (!title) reasons.push('нет strong/title');
+      if (!url) reasons.push('ссылка с ID не найдена');
 
-      return { id, title, price, address, date, url, image };
-    }).filter(row => row.id && row.title && row.url);
+      return {
+        index: index + 1, id, title, price, address, date, url, image,
+        linkCount: anchors.length,
+        cardText: clean(card.innerText).slice(0, 220),
+        reasons
+      };
+    });
 
-    const unique = [...new Map(rows.map(row => [row.id, row])).values()];
+    const valid = diagnostics.filter(row => !row.reasons.length);
+    const unique = [...new Map(valid.map(row => [row.id, row])).values()];
     const columns = ['id', 'title', 'price', 'address', 'date', 'url', 'image'];
-    const quote = value => '"' + String(value ?? '').replace(/"/g, '""').replace(/[\r\n]+/g, ' ') + '"';
-    const csv = '\uFEFF' + [
+    const quote = value => '"' + String(value ?? '').replace(/"/g, '""').replace(/[\\r\\n]+/g, ' ') + '"';
+    const csv = '\\uFEFF' + [
       columns.join(';'),
       ...unique.map(row => columns.map(key => quote(row[key])).join(';'))
-    ].join('\r\n');
+    ].join('\\r\\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const objectUrl = URL.createObjectURL(blob);
@@ -78,18 +86,27 @@
     download.remove();
     setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
 
-    const missing = cards.length - unique.length;
-    say(
-      'Avito Parser — готово\n' +
-      'DOM-карточек найдено: ' + cards.length + '\n' +
-      'Записей в CSV: ' + unique.length + '\n' +
-      'Пропущено/дубликатов: ' + missing + '\n\n' +
-      'CSV должен скачаться автоматически.\n' +
-      'Нажми на это окно, чтобы закрыть.'
-    );
+    const report = diagnostics.map(row =>
+      '#' + row.index + ' [' + (row.id || 'NO ID') + '] ' +
+      (row.reasons.length ? 'SKIP: ' + row.reasons.join(', ') : 'OK') + '\\n' +
+      'title: ' + (row.title || '—') + '\\n' +
+      'price: ' + (row.price || '—') + ' | links: ' + row.linkCount + '\\n' +
+      'url: ' + (row.url || '—') + '\\n' +
+      'text: ' + (row.cardText || '—')
+    ).join('\\n\\n');
+
+    panel.textContent =
+      'AVITO PARSER — ДИАГНОСТИКА\\n' +
+      'URL: ' + location.href + '\\n' +
+      'Карточек по селектору: ' + cards.length + '\\n' +
+      'Валидных: ' + valid.length + ' | уникальных в CSV: ' + unique.length + '\\n' +
+      'Пропущено: ' + (cards.length - valid.length) + '\\n' +
+      'CSV: avito_items_' + unique.length + '.csv\\n\\n' +
+      'ПОКАРТОЧНЫЙ РАЗБОР\\n\\n' + report +
+      '\\n\\nНажми на окно, чтобы закрыть.';
     panel.onclick = () => panel.remove();
   } catch (error) {
-    say('Ошибка Avito Parser:\n' + (error.stack || error.message) + '\n\nНажми, чтобы закрыть.');
+    panel.textContent = 'Ошибка Avito Parser:\\n' + (error.stack || error.message) + '\\n\\nНажми, чтобы закрыть.';
     panel.onclick = () => panel.remove();
   } finally {
     window.__avitoParserRunning = false;
