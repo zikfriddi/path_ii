@@ -30,7 +30,17 @@
       const marker = card.getAttribute('data-marker') || '';
       const id = marker.replace(/^item-/, '');
       const anchors = [...card.querySelectorAll('a[href]')];
-      const link = anchors.find(a => a.href.includes(id) && /\/\d{6,}/.test(a.href));
+      const anchorInfo = anchors.map(a => ({
+        raw: a.getAttribute('href') || '',
+        absolute: a.href || '',
+        text: clean(a.innerText),
+        containsIdRaw: (a.getAttribute('href') || '').includes(id),
+        containsIdAbsolute: (a.href || '').includes(id)
+      }));
+      const link = anchors.find(a => {
+        const href = a.getAttribute('href') || '';
+        return href.includes(id) || a.href.includes(id);
+      });
       const title = clean(card.querySelector('strong')?.innerText);
       const price = clean([...card.querySelectorAll('h4, [data-marker*="price"]')]
         .map(el => el.innerText).find(value => /₽/.test(value)));
@@ -40,16 +50,16 @@
         .find(value => value && datePattern.test(value)));
       const imageEl = card.querySelector('img');
       const image = imageEl?.currentSrc || imageEl?.src || '';
-      const parsedUrl = link ? new URL(link.href, location.href) : null;
+      const parsedUrl = link ? new URL(link.getAttribute('href') || link.href, location.href) : null;
       const url = parsedUrl ? parsedUrl.origin + parsedUrl.pathname : '';
       const reasons = [];
       if (!id || !/^\d{6,}$/.test(id)) reasons.push('ID не распознан');
       if (!title) reasons.push('нет strong/title');
-      if (!url) reasons.push('ссылка с ID не найдена');
+      if (!url) reasons.push('ссылка не содержит ID в href');
 
       return {
         index: index + 1, id, title, price, address, date, url, image,
-        linkCount: anchors.length,
+        linkCount: anchors.length, anchorInfo,
         cardText: clean(card.innerText).slice(0, 220),
         reasons
       };
@@ -74,23 +84,31 @@
     download.remove();
     setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
 
-    const report = diagnostics.map(row =>
-      '#' + row.index + ' [' + (row.id || 'NO ID') + '] ' +
-      (row.reasons.length ? 'SKIP: ' + row.reasons.join(', ') : 'OK') + '\n' +
-      'title: ' + (row.title || '—') + '\n' +
-      'price: ' + (row.price || '—') + ' | links: ' + row.linkCount + '\n' +
-      'url: ' + (row.url || '—') + '\n' +
-      'text: ' + (row.cardText || '—')
-    ).join('\n\n');
+    const report = diagnostics.map(row => {
+      const links = row.index <= 3
+        ? '\nHREF:\n' + row.anchorInfo.map((a, i) =>
+            '  [' + (i + 1) + '] raw: ' + (a.raw || '—') + '\n' +
+            '      abs: ' + (a.absolute || '—') + '\n' +
+            '      text: ' + (a.text || '—') +
+            ' | ID raw/abs: ' + a.containsIdRaw + '/' + a.containsIdAbsolute
+          ).join('\n')
+        : '';
+      return '#' + row.index + ' [' + (row.id || 'NO ID') + '] ' +
+        (row.reasons.length ? 'SKIP: ' + row.reasons.join(', ') : 'OK') + '\n' +
+        'title: ' + (row.title || '—') + '\n' +
+        'price: ' + (row.price || '—') + ' | links: ' + row.linkCount + '\n' +
+        'url: ' + (row.url || '—') + '\n' +
+        'text: ' + (row.cardText || '—') + links;
+    }).join('\n\n');
 
     panel.textContent =
-      'AVITO PARSER — ДИАГНОСТИКА\n' +
+      'AVITO PARSER — ДИАГНОСТИКА HREF\n' +
       'URL: ' + location.href + '\n' +
-      'Карточек по селектору: ' + cards.length + '\n' +
+      'Карточек: ' + cards.length + '\n' +
       'Валидных: ' + valid.length + ' | уникальных в CSV: ' + unique.length + '\n' +
       'Пропущено: ' + (cards.length - valid.length) + '\n' +
       'CSV: avito_items_' + unique.length + '.csv\n\n' +
-      'ПОКАРТОЧНЫЙ РАЗБОР\n\n' + report +
+      'ПОКАРТОЧНЫЙ РАЗБОР (HREF показаны для первых 3 карточек)\n\n' + report +
       '\n\nНажми на окно, чтобы закрыть.';
     panel.onclick = () => panel.remove();
   } catch (error) {
