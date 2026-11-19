@@ -28,6 +28,15 @@
       .filter(t => t.includes(':') && !/разместить похожее|^характеристики$/i.test(t)));
   }
 
+  const attributes = {};
+  const attributePattern = /([^:]{2,45}):\\s*(.*?)(?=\\s+[^:]{2,45}:\\s|$)/g;
+  let attributeMatch;
+  while ((attributeMatch = attributePattern.exec(paramsText)) !== null) {
+    const key = clean(attributeMatch[1]).replace(/^.*характеристики\\s*/i, '');
+    const value = clean(attributeMatch[2]);
+    if (key && value && !/разместить похожее/i.test(key)) attributes[key] = value;
+  }
+
   const price = clean(marker('item-view/item-price')?.innerText ||
     meta('product:price:amount') || meta('og:price:amount'));
   const title = clean(document.querySelector('h1')?.innerText || meta('og:title'));
@@ -49,6 +58,11 @@
         return u.origin + u.pathname;
       })
   );
+  const bodyText = clean(document.body.innerText);
+  const listingMetaMatch = id
+    ? bodyText.match(new RegExp('№\\\\s*' + id + '\\\\s*·\\\\s*([^·]+)·\\\\s*(\\\\d+)\\\\s+просмотр', 'i'))
+    : null;
+  const responseMatch = bodyText.match(/Отвечает\\s+[^.]+/i);
   const seller = {
     name: sellerName,
     rating: ratingMatch ? ratingMatch[1].replace(',', '.') : '',
@@ -57,6 +71,7 @@
     type: sellerTypeMatch ? sellerTypeMatch[0] : '',
     active_ads_count: adsCountMatch ? Number(adsCountMatch[1]) : null,
     profile_urls: profileUrls,
+    response_time: responseMatch ? clean(responseMatch[0]) : '',
     visible_info: sellerText
   };
 
@@ -96,7 +111,12 @@
     price,
     location: locationText,
     parameters,
+    attributes,
     parameters_raw: paramsText,
+    listing_stats: {
+      published_label: listingMetaMatch ? clean(listingMetaMatch[1]) : '',
+      views_count: listingMetaMatch ? Number(listingMetaMatch[2]) : null
+    },
     description,
     seller,
     delivery_and_pickup: { pickup_only: pickupOnly, visible_text: deliveryText },
@@ -139,12 +159,13 @@
     'Заголовок: ' + (title || 'не найден'),
     'Цена: ' + (price || 'не найдена'),
     'Описание: ' + (description ? description.length + ' символов' : 'не найдено'),
-    'Характеристики: ' + parameters.length + ' строк',
+    'Характеристики: ' + parameters.length + ' строк | атрибутов: ' + Object.keys(attributes).length,
     'Продавец: ' + (seller.name || 'не определён'),
     'Рейтинг: ' + (seller.rating || '—') + ' | отзывов: ' + (seller.reviews_count ?? '—'),
     'Тип: ' + (seller.type || '—') + ' | на Авито: ' + (seller.account_since || '—'),
     'Объявлений продавца: ' + (seller.active_ads_count ?? '—'),
     'Ссылок профиля: ' + profileUrls.length,
+    'Просмотров: ' + (data.listing_stats.views_count ?? '—'),
     'Только самовывоз: ' + (pickupOnly ? 'да' : 'не подтверждено'),
     'Фотографий галереи: ' + images.length + ' (img: ' + galleryImages.length + ')',
     '',
