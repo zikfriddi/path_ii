@@ -33,7 +33,7 @@
   let attributeMatch;
   while ((attributeMatch = attributePattern.exec(paramsText)) !== null) {
     const key = clean(attributeMatch[1]).replace(/^.*характеристики\s*/i, '');
-    const value = clean(attributeMatch[2]);
+    const value = clean(attributeMatch[2]).replace(/\s*Разместить похожее объявление.*$/i, '');
     if (key && value && !/разместить похожее/i.test(key)) attributes[key] = value;
   }
 
@@ -60,7 +60,7 @@
   );
   const bodyText = clean(document.body.innerText);
   const listingMetaMatch = id
-    ? bodyText.match(new RegExp('№\\s*' + id + '\\s*·\\s*([^·]+)·\\s*(\\d+)\\s+просмотр', 'i'))
+    ? bodyText.match(new RegExp('№\s*' + id + '\s*·\s*([^·]+)·\s*(\d+)\s+просмотр', 'i'))
     : null;
   const responseMatch = bodyText.match(/Отвечает\s+[^.]+/i);
   const seller = {
