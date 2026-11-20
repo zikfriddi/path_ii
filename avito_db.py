@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS listings (
     title TEXT,
     url TEXT,
     location TEXT,
+    address TEXT,
     first_seen_at TEXT NOT NULL,
     last_seen_at TEXT NOT NULL,
     last_price_rub INTEGER,
@@ -69,6 +70,7 @@ CREATE TABLE IF NOT EXISTS snapshots (
     views_count INTEGER,
     title TEXT,
     location TEXT,
+    address TEXT,
     seller_rating REAL,
     seller_reviews_count INTEGER,
     UNIQUE(listing_id, observed_at, source)
@@ -124,11 +126,10 @@ def json_text(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
-def seller_key(seller: dict[str, Any]) -> str | None:
+def seller_key(seller: dict[str, Any], listing_id: str) -> str | None:
     urls = seller.get("profile_urls") or []
-    identity = clean(urls[0]) if urls else clean(seller.get("name"))
-    if not identity:
-        return None
+    # Without a profile URL, do not merge unrelated sellers with the same display name.
+    identity = clean(urls[0]) if urls else f"listing:{listing_id}"
     return hashlib.sha256(identity.lower().encode("utf-8")).hexdigest()[:24]
 
 
@@ -167,6 +168,7 @@ def upsert_listing(
     title: str | None,
     url: str | None,
     location: str | None,
+    address: str | None,
     price: int | None,
     views: int | None,
     observed_at: str,
@@ -174,24 +176,25 @@ def upsert_listing(
 ) -> None:
     conn.execute(
         """INSERT INTO listings
-           (id,title,url,location,first_seen_at,last_seen_at,last_price_rub,
+           (id,title,url,location,address,first_seen_at,last_seen_at,last_price_rub,
             last_views_count,last_source)
-           VALUES (?,?,?,?,?,?,?,?,?)
+           VALUES (?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(id) DO UPDATE SET
              title=COALESCE(excluded.title,listings.title),
              url=COALESCE(excluded.url,listings.url),
              location=COALESCE(excluded.location,listings.location),
+             address=COALESCE(excluded.address,listings.address),
              last_seen_at=excluded.last_seen_at,
              last_price_rub=COALESCE(excluded.last_price_rub,listings.last_price_rub),
              last_views_count=COALESCE(excluded.last_views_count,listings.last_views_count),
              last_source=excluded.last_source""",
-        (listing_id, title, url, location, observed_at, observed_at, price, views, source),
+        (listing_id, title, url, location, address, observed_at, observed_at, price, views, source),
     )
     conn.execute(
         """INSERT OR IGNORE INTO snapshots
-           (listing_id,observed_at,source,price_rub,views_count,title,location)
-           VALUES (?,?,?,?,?,?,?)""",
-        (listing_id, observed_at, source, price, views, title, location),
+           (listing_id,observed_at,source,price_rub,views_count,title,location,address)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (listing_id, observed_at, source, price, views, title, location, address),
     )
 
 
@@ -220,7 +223,7 @@ def import_list_csv(conn: sqlite3.Connection, file_path: Path) -> tuple[int, int
                 price = parse_price(row.get("price"))
                 upsert_listing(
                     conn, listing_id, clean(row.get("title")), clean(row.get("url")),
-                    clean(row.get("address")), price, None, observed_at, "list"
+                    None, clean(row.get("address")), price, None, observed_at, "list"
                 )
                 imported += 1
             except Exception as exc:
@@ -250,11 +253,11 @@ def import_detail_json(conn: sqlite3.Connection, file_path: Path) -> tuple[int, 
                 location = clean(item.get("location"))
                 title = clean(item.get("title"))
                 upsert_listing(
-                    conn, listing_id, title, clean(item.get("url")), location,
+                    conn, listing_id, title, clean(item.get("url")), location, None,
                     price, views, observed_at, "detail"
                 )
 
-                key = seller_key(seller)
+                key = seller_key(seller, listing_id)
                 if key:
                     profile_urls = seller.get("profile_urls") or []
                     conn.execute(
