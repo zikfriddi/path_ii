@@ -1,0 +1,6 @@
+# Local Avito database and runtime files
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+__pycache__/
+*.py[cod]
