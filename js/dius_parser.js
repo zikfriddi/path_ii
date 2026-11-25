@@ -9,11 +9,11 @@ Object.assign(panel.style,{position:'fixed',top:'8px',left:'8px',right:'8px',zIn
 document.body.append(panel);
 const say=s=>panel.textContent=s;
 function scan(){root.querySelectorAll('a[data-itemcard][href*="/item/"]').forEach(a=>{if(a.dataset.itemcard)links.set(a.dataset.itemcard,a.href)})}
-function text(el){return(el?.textContent||'').replace(/\\s+/g,' ').trim()}
+function text(el){return(el?.textContent||'').replace(/\s+/g,' ').trim()}
 function first(d,selectors){for(const sel of selectors){const e=d.querySelector(sel);if(e&&text(e))return text(e)}return ''}
 function getByLabel(d,label){const nodes=[...d.querySelectorAll('div,span,b')];const e=nodes.find(x=>text(x)===label);return e?text(e.parentElement?.querySelector('b,span:last-child,div:last-child')):''}
 function parseLot(html,url){
- const d=new DOMParser().parseFromString(html,'text/html'),id=(url.match(/\\/item\\/(\\d+)/)||[])[1];
+ const d=new DOMParser().parseFromString(html,'text/html'),id=(url.match(/\/item\/(\d+)/)||[])[1];
  const title=first(d,['[itemprop="name"]','.titleText_5b603','h1']);
  if(!title)throw Error('Не найдено название лота: HTML похож на заглушку/страницу ограничения');
  const price=first(d,['[class*="currentBid"]','[class*="currentPrice"]','[itemprop="price"]']);
@@ -29,19 +29,19 @@ function csv(v){if(v==null)return '';if(Array.isArray(v))v=v.join(', ');if(typeo
 function download(name,data,type){const blob=new Blob([data],{type}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
 try{
  let idle=0,last=0;
- for(let i=0;i<140;i++){scan();say('Сбор ссылок\\nНайдено: '+links.size+'\\nПроход: '+(i+1)+'/140');window.scrollBy(0,1000);await sleep(350);scan();if(links.size===last)idle++;else idle=0;last=links.size;if(idle>=8)break}
+ for(let i=0;i<140;i++){scan();say('Сбор ссылок\nНайдено: '+links.size+'\nПроход: '+(i+1)+'/140');window.scrollBy(0,1000);await sleep(350);scan();if(links.size===last)idle++;else idle=0;last=links.size;if(idle>=8)break}
  const list=[...links.values()];if(!list.length)throw Error('Ссылки не найдены');
  let next=0,done=0,success=0;
- async function worker(){while(true){const i=next++;if(i>=list.length)return;const url=list[i],id=(url.match(/\\/item\\/(\\d+)/)||[])[1];let status='—',html='';
+ async function worker(){while(true){const i=next++;if(i>=list.length)return;const url=list[i],id=(url.match(/\/item\/(\d+)/)||[])[1];let status='—',html='';
  try{const res=await fetch(url,{credentials:'same-origin'});status=res.status;if(!res.ok)throw Error('HTTP '+status);html=await res.text();rows[i]=parseLot(html,url);success++}
- catch(e){const d=new DOMParser().parseFromString(html,'text/html');errors.push('ID: '+id+'\\nURL: '+url+'\\nHTTP: '+status+'\\nОшибка: '+e.message+'\\nЗаголовок: '+text(d.title)+'\\nТекст страницы: '+text(d.body).slice(0,1200)+'\\nHTML: '+html.length+' символов')}
- done++;say('Выгрузка лотов (8 потоков)\\nОбработано: '+done+'/'+list.length+'\\nУспешно: '+success+'\\nОшибок: '+errors.length+'\\nПоследний ID: '+id+'\\nHTTP: '+status+(errors.length?'\\n\\nПоследняя ошибка:\\n'+errors[errors.length-1].slice(0,450):''))}}
+ catch(e){const d=new DOMParser().parseFromString(html,'text/html');errors.push('ID: '+id+'\nURL: '+url+'\nHTTP: '+status+'\nОшибка: '+e.message+'\nЗаголовок: '+text(d.title)+'\nТекст страницы: '+text(d.body).slice(0,1200)+'\nHTML: '+html.length+' символов')}
+ done++;say('Выгрузка лотов (8 потоков)\nОбработано: '+done+'/'+list.length+'\nУспешно: '+success+'\nОшибок: '+errors.length+'\nПоследний ID: '+id+'\nHTTP: '+status+(errors.length?'\n\nПоследняя ошибка:\n'+errors[errors.length-1].slice(0,450):''))}}
  await Promise.all(Array.from({length:8},()=>worker()));
  const valid=rows.filter(Boolean),cols=[['ID','id'],['Название','title'],['Цена','price'],['Стартовая цена','startPrice'],['Окончание','endDate'],['Описание состояния и товара','description'],['Фотографии','pictures'],['Ссылка','url']];
- const content='\\uFEFF'+[cols.map(x=>csv(x[0])).join(';'),...valid.map(r=>cols.map(x=>csv(r[x[1]])).join(';'))].join('\\r\\n');
+ const content='\uFEFF'+[cols.map(x=>csv(x[0])).join(';'),...valid.map(r=>cols.map(x=>csv(r[x[1]])).join(';'))].join('\r\n');
  download('Meshok_lots_'+valid.length+'.csv',content,'text/csv;charset=utf-8');
- if(errors.length)download('Dius_errors.txt','\\uFEFF'+errors.join('\\r\\n\\r\\n'),'text/plain;charset=utf-8');
- say('ГОТОВО!\\nНайдено ссылок: '+list.length+'\\nВыгружено: '+valid.length+'\\nОшибок: '+errors.length+'\\nCSV скачивается.\\nНажми здесь, чтобы закрыть.');panel.onclick=()=>panel.remove()
-}catch(e){say('КРИТИЧЕСКАЯ ОШИБКА\\n'+e.stack);panel.onclick=()=>panel.remove()}
+ if(errors.length)download('Dius_errors.txt','\uFEFF'+errors.join('\r\n\r\n'),'text/plain;charset=utf-8');
+ say('ГОТОВО!\nНайдено ссылок: '+list.length+'\nВыгружено: '+valid.length+'\nОшибок: '+errors.length+'\nCSV скачивается.\nНажми здесь, чтобы закрыть.');panel.onclick=()=>panel.remove()
+}catch(e){say('КРИТИЧЕСКАЯ ОШИБКА\n'+e.stack);panel.onclick=()=>panel.remove()}
 finally{window.__meshBulk=false}
 })();
