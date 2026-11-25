@@ -11,13 +11,12 @@ const say=s=>panel.textContent=s;
 function scan(){root.querySelectorAll('a[data-itemcard][href*="/item/"]').forEach(a=>{if(a.dataset.itemcard)links.set(a.dataset.itemcard,a.href)})}
 function text(el){return(el?.textContent||'').replace(/\s+/g,' ').trim()}
 function first(d,selectors){for(const sel of selectors){const e=d.querySelector(sel);if(e&&text(e))return text(e)}return ''}
-function getByLabel(d,label){const nodes=[...d.querySelectorAll('div,span,b')];const e=nodes.find(x=>text(x)===label);return e?text(e.parentElement?.querySelector('b,span:last-child,div:last-child')):''}
 function parseLot(html,url){
  const d=new DOMParser().parseFromString(html,'text/html'),id=(url.match(/\/item\/(\d+)/)||[])[1];
  const title=first(d,['[itemprop="name"]','.titleText_5b603','h1']);
  if(!title)throw Error('Не найдено название лота: HTML похож на заглушку/страницу ограничения');
  const price=first(d,['[class*="currentBid"]','[class*="currentPrice"]','[itemprop="price"]']);
- const startPrice=first(d,['[class*="startPrice"]','[class*="startingPrice"]'])||getByLabel(d,'Стартовая цена');
+ const startPrice=first(d,['[class*="startPrice"]','[class*="startingPrice"]']);
  const endDate=first(d,['[class*="endDate"] b','[class*="endDate"]']);
  const desc=first(d,['.legacy-viewer[class*="description"]','[class*="description_"]','.description']);
  const short=first(d,['[class*="shortDescription_"]']);
